@@ -1,4 +1,4 @@
 ruby-em-proxy
 =============
 
-Simple Ruby TCP proxy using EventMachine.
+Simple TCP proxy using EventMachine in Ruby.
