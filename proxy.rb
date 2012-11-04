@@ -78,9 +78,7 @@ def main
   hostPortRE = /^(.+):(\d+)$/
   hostAndPorts = ARGV.map do |arg|
     match = hostPortRE.match(arg)
-    if match.nil?
-      raise "Illegal argument '#{arg}'"
-    end
+    raise "Illegal argument '#{arg}'" if match.nil?
     { :host => match[1], :port => match[2].to_i }
   end
 
