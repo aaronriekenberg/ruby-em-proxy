@@ -19,8 +19,8 @@ class ProxyRemoteConnection < EM::Connection
       "#{localIP}:#{localPort} -> #{remoteIP}:#{remotePort}"
     puts "connected #{@connectionString}"
 
-    @connectCompleteCallback.call if not @connectCompleteCallback.nil?
     @connectFailedCallback = nil
+    @connectCompleteCallback.call if not @connectCompleteCallback.nil?
   end
 
   def proxy_target_unbound
