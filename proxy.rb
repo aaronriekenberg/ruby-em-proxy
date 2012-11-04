@@ -9,7 +9,6 @@ class ProxyRemoteConnection < EM::Connection
     super()
     @connectCompleteCallback = connectCompleteCallback
     @connectFailedCallback = connectFailedCallback
-    @connectionString = nil
   end
 
   def connection_completed
@@ -20,7 +19,7 @@ class ProxyRemoteConnection < EM::Connection
     puts "connected #{@connectionString}"
 
     @connectFailedCallback = nil
-    @connectCompleteCallback.call if not @connectCompleteCallback.nil?
+    @connectCompleteCallback.call(self) if not @connectCompleteCallback.nil?
   end
 
   def proxy_target_unbound
@@ -39,7 +38,6 @@ class ProxyClientConnection < EM::Connection
   def initialize(remoteHostAndPort)
     super()
     @remoteHostAndPort = remoteHostAndPort
-    @connectionString = nil
   end
 
   def post_init
@@ -50,18 +48,19 @@ class ProxyClientConnection < EM::Connection
     puts "accept #{@connectionString}"
 
     pause
-    connectCompleteCallback = proc { start_proxy }
+    connectCompleteCallback = proc do |remoteConnection| 
+      start_proxy(remoteConnection)
+    end
     connectFailedCallback = proc { close_connection }
-    @proxyRemoteConnection =
-      EM::connect(@remoteHostAndPort[:host], @remoteHostAndPort[:port],
-                  ProxyRemoteConnection,
-                  connectCompleteCallback, connectFailedCallback)
+    EM::connect(@remoteHostAndPort[:host], @remoteHostAndPort[:port],
+                ProxyRemoteConnection,
+                connectCompleteCallback, connectFailedCallback)
   end
 
-  def start_proxy
+  def start_proxy(remoteConnection)
     resume
-    EM::enable_proxy(self, @proxyRemoteConnection, 65536)
-    EM::enable_proxy(@proxyRemoteConnection, self, 65536)
+    EM::enable_proxy(self, remoteConnection, 65536)
+    EM::enable_proxy(remoteConnection, self, 65536)
   end
 
   def proxy_target_unbound
