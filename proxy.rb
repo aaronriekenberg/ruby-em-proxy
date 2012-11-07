@@ -1,7 +1,15 @@
 #!/usr/bin/env ruby
 
 require 'eventmachine'
+require 'logger'
 require 'socket'
+
+LOGGER = Logger.new(STDOUT)
+LOGGER.formatter = proc do |severity, datetime, progname, msg|
+  formattedDateTime = datetime.strftime("%Y-%m-%d %H:%M:%S.") << 
+                      ("%06d" % datetime.usec)
+  "#{formattedDateTime} #{msg}\n"
+end
 
 class ProxyRemoteConnection < EM::Connection
 
@@ -16,7 +24,7 @@ class ProxyRemoteConnection < EM::Connection
     remotePort, remoteIP = Socket.unpack_sockaddr_in(get_peername)
     @connectionString =
       "#{localIP}:#{localPort} -> #{remoteIP}:#{remotePort}"
-    puts "connected #{@connectionString}"
+    LOGGER.info("connected #{@connectionString}")
 
     @connectFailed = nil
     @connectComplete.call(self) if @connectComplete
@@ -27,7 +35,7 @@ class ProxyRemoteConnection < EM::Connection
   end
 
   def unbind
-    puts "close #{@connectionString}" if @connectionString
+    LOGGER.info("close #{@connectionString}") if @connectionString
     @connectFailed.call if @connectFailed
   end
 
@@ -45,7 +53,7 @@ class ProxyClientConnection < EM::Connection
     localPort, localIP = Socket.unpack_sockaddr_in(get_sockname)
     @connectionString =
       "#{clientIP}:#{clientPort} -> #{localIP}:#{localPort}"
-    puts "accept #{@connectionString}"
+    LOGGER.info("accept #{@connectionString}")
 
     pause
     connectComplete = proc { |remoteConnection| start_proxy(remoteConnection) }
@@ -66,7 +74,7 @@ class ProxyClientConnection < EM::Connection
   end
 
   def unbind
-    puts "close #{@connectionString}" if @connectionString
+    LOGGER.info("close #{@connectionString}") if @connectionString
   end
 
 end
@@ -80,18 +88,18 @@ def main
   end
 
   if hostAndPorts.length < 2
-    puts "Usage: #{$0} <listen addr> [ <listen addr> ... ] <remote addr>"
+    LOGGER.warn("Usage: #{$0} <listen addr> [ <listen addr> ... ] <remote addr>")
     exit(1)
   end
 
   remoteHostAndPort = hostAndPorts.pop
-  puts "remote address #{remoteHostAndPort[:host]}:#{remoteHostAndPort[:port]}"
+  LOGGER.info("remote address #{remoteHostAndPort[:host]}:#{remoteHostAndPort[:port]}")
 
   EM::run do
     Signal.trap('INT') { EM::stop }
     Signal.trap('TERM') { EM::stop }
     hostAndPorts.each do |serverHostAndPort|
-      puts "listening on #{serverHostAndPort[:host]}:#{serverHostAndPort[:port]}"
+      LOGGER.info("listening on #{serverHostAndPort[:host]}:#{serverHostAndPort[:port]}")
       EM::start_server(serverHostAndPort[:host], serverHostAndPort[:port],
                        ProxyClientConnection, remoteHostAndPort)
     end
