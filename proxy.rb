@@ -5,10 +5,10 @@ require 'socket'
 
 class ProxyRemoteConnection < EM::Connection
 
-  def initialize(connectCompleteCallback, connectFailedCallback)
+  def initialize(connectComplete, connectFailed)
     super()
-    @connectCompleteCallback = connectCompleteCallback
-    @connectFailedCallback = connectFailedCallback
+    @connectComplete = connectComplete
+    @connectFailed = connectFailed
   end
 
   def connection_completed
@@ -18,8 +18,8 @@ class ProxyRemoteConnection < EM::Connection
       "#{localIP}:#{localPort} -> #{remoteIP}:#{remotePort}"
     puts "connected #{@connectionString}"
 
-    @connectFailedCallback = nil
-    @connectCompleteCallback.call(self) if not @connectCompleteCallback.nil?
+    @connectFailed = nil
+    @connectComplete.call(self) if @connectComplete
   end
 
   def proxy_target_unbound
@@ -27,8 +27,8 @@ class ProxyRemoteConnection < EM::Connection
   end
 
   def unbind
-    puts "close #{@connectionString}" if not @connectionString.nil?
-    @connectFailedCallback.call if not @connectFailedCallback.nil?
+    puts "close #{@connectionString}" if @connectionString
+    @connectFailed.call if @connectFailed
   end
 
 end
@@ -48,13 +48,11 @@ class ProxyClientConnection < EM::Connection
     puts "accept #{@connectionString}"
 
     pause
-    connectCompleteCallback = proc do |remoteConnection| 
-      start_proxy(remoteConnection)
-    end
-    connectFailedCallback = proc { close_connection }
+    connectComplete = proc { |remoteConnection| start_proxy(remoteConnection) }
+    connectFailed = proc { close_connection }
     EM::connect(@remoteHostAndPort[:host], @remoteHostAndPort[:port],
                 ProxyRemoteConnection,
-                connectCompleteCallback, connectFailedCallback)
+                connectComplete, connectFailed)
   end
 
   def start_proxy(remoteConnection)
@@ -68,7 +66,7 @@ class ProxyClientConnection < EM::Connection
   end
 
   def unbind
-    puts "close #{@connectionString}" if not @connectionString.nil?
+    puts "close #{@connectionString}" if @connectionString
   end
 
 end
